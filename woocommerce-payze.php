@@ -5,7 +5,7 @@ Description: Платежный шлюз Payze для WooCommerce.
 Version: 1.0
 Author: Payze
 */
-
+//
 // Инициализация Payze gateway
 function init_payze_gateway() {
     if (class_exists('WC_Payment_Gateway')) {
