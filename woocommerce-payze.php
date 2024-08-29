@@ -5,7 +5,7 @@ Description: Платежный шлюз Payze для WooCommerce.
 Version: 1.0
 Author: Payze
 */
-
+//
 // Инициализация Payze gateway
 function init_payze_gateway() {
     if (class_exists('WC_Payment_Gateway')) {
@@ -175,44 +175,34 @@ function get_payment_receipt($payment_id) {
     }
 }
 
-
-
-
-
 function handle_payze_webhook() {
     $data = json_decode(file_get_contents('php://input'), true);
 
     if (!empty($data['IdempotencyKey']) && !empty($data['PaymentStatus'])) {
-        $order_id_parts = explode('_', $data['IdempotencyKey']);
-        $order_id = $order_id_parts[0];
+        $order_id = $data['IdempotencyKey'];
         $order = wc_get_order($order_id);
 
         if ($order) {
             $status = get_option('woocommerce_payze_settings')['success_status'];
 
-            switch ($data['PaymentStatus']) {
-                case 'Captured':
-                    $order->payment_complete($data['PaymentId']);
-                    $order->update_status($status, __('Оплата успешно завершена через Payze', 'woocommerce'));
+            if ($data['PaymentStatus'] === 'Captured') {
+                $order->payment_complete($data['PaymentId']);
+                $order->update_status($status, __('Оплата успешно завершена через Payze', 'woocommerce'));
 
-                    // Получаем квитанцию
-                    $receipt = get_payment_receipt($data['PaymentId']);
+                // Получаем квитанцию
+                $receipt = get_payment_receipt($data['PaymentId']);
 
-                    if ($receipt) {
-                        // Сохранить квитанцию как метаданные заказа или отправить по email
-                        $order->update_meta_data('_payment_receipt', base64_encode($receipt)); // Сохраняем в формате base64
-                        $order->save();
-                    } else {
-                        // Обработка ошибок, если квитанция не была получена
-                        error_log('Ошибка при получении квитанции для заказа ' . $order_id);
-                    }
-                    break;
-                case 'Blocked':
-                    $order->update_status('on-hold', __('Платеж заблокирован. Ожидается подтверждение.', 'woocommerce'));
-                    break;
-                default:
-                    $order->update_status('failed', __('Платеж не был завершен.', 'woocommerce'));
-                    break;
+                if ($receipt) {
+                    // Сохранить квитанцию как метаданные заказа
+                    $order->update_meta_data('_payment_receipt', base64_encode($receipt)); // Сохраняем в формате base64
+                    $order->save();
+                } else {
+                    error_log('Ошибка при получении квитанции для заказа ' . $order_id);
+                }
+            } elseif ($data['PaymentStatus'] === 'Blocked') {
+                $order->update_status('on-hold', __('Платеж заблокирован. Ожидается подтверждение.', 'woocommerce'));
+            } else {
+                $order->update_status('failed', __('Платеж не был завершен.', 'woocommerce'));
             }
         }
     }
@@ -220,6 +210,7 @@ function handle_payze_webhook() {
     wp_send_json_success();
     exit;
 }
+
 
 // Добавление ссылки "Настройки" на страницу списка плагинов
 add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'payze_gateway_settings_link');
