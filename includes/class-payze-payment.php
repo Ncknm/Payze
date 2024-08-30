@@ -24,6 +24,54 @@ class WC_Gateway_Payze extends WC_Payment_Gateway {
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
     }
 
+    public function init_form_fields() {
+        $this->form_fields = array(
+            'enabled' => array(
+                'title'   => 'Включить/Отключить',
+                'label'   => 'Включить Payze Gateway',
+                'type'    => 'checkbox',
+                'default' => 'no',
+            ),
+            'title' => array(
+                'title'       => 'Название',
+                'type'        => 'text',
+                'description' => 'Название, которое пользователь увидит при оформлении заказа.',
+                'default'     => 'Payze',
+            ),
+            'description' => array(
+                'title'       => 'Описание',
+                'type'        => 'textarea',
+                'description' => 'Описание, которое пользователь увидит при оформлении заказа.',
+                'default'     => 'Оплатите через Payze',
+            ),
+            'api_key' => array(
+                'title'       => 'API Key',
+                'type'        => 'text',
+                'description' => 'Введите ваш API Key.',
+            ),
+            'secret_key' => array(
+                'title'       => 'Secret Key',
+                'type'        => 'text',
+                'description' => 'Введите ваш Secret Key.',
+            ),
+            'success_status' => array(
+                'title'       => 'Статус при успешной оплате',
+                'type'        => 'select',
+                'description' => 'Выберите статус, который будет установлен при успешной оплате.',
+                'default'     => 'processing',
+                'options'     => wc_get_order_statuses(),
+            ),
+        );
+    }
+
+    public function is_available() {
+        return 'yes' === $this->get_option('enabled');
+    }
+
+    public function payment_fields() {
+        echo '<p>' . esc_html($this->description) . '</p>';
+    }
+
     public function process_payment($order_id) {
         $order = wc_get_order($order_id);
         $site_url = get_site_url();
